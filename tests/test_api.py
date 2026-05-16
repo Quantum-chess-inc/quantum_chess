@@ -67,6 +67,7 @@ class ApiTest(unittest.TestCase):
 
     def test_merge_move_endpoint_combines_split_branches(self):
         self.client.post("/game/move/split", json={"src": "b1", "target_a": "a3", "target_b": "c3"})
+        # Force white's turn — test-only hack to skip the opponent's move
         store.get_game().side_to_move = "white"
 
         response = self.client.post(
@@ -119,6 +120,80 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(payload["board"]["e8"], "Q")
         self.assertEqual(payload["last_move_outcome"], "success")
         self.assertEqual(payload["side_to_move"], "black")
+
+    def test_snapshot_includes_move_history_field(self):
+        response = self.client.get("/game")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("move_history", payload)
+        self.assertEqual(payload["move_history"], [])
+
+    def test_history_empty_on_start(self):
+        response = self.client.get("/game")
+        self.assertEqual(response.json()["move_history"], [])
+
+    def test_classical_move_appends_history_entry(self):
+        self.client.post("/game/move/classical", json={"src": "b1", "target": "c3"})
+        response = self.client.get("/game")
+        history = response.json()["move_history"]
+        self.assertEqual(len(history), 1)
+        entry = history[0]
+        self.assertEqual(entry["move_number"], 1)
+        self.assertEqual(entry["side"], "white")
+        self.assertEqual(entry["mode"], "classical")
+        self.assertEqual(entry["piece"], "N")
+        self.assertEqual(entry["squares"], ["b1", "c3"])
+        self.assertEqual(entry["outcome"], "success")
+
+    def test_split_move_appends_history_entry(self):
+        self.client.post(
+            "/game/move/split",
+            json={"src": "b1", "target_a": "a3", "target_b": "c3"},
+        )
+        response = self.client.get("/game")
+        history = response.json()["move_history"]
+        self.assertEqual(len(history), 1)
+        entry = history[0]
+        self.assertEqual(entry["mode"], "split")
+        self.assertEqual(entry["piece"], "N")
+        self.assertEqual(entry["squares"], ["b1", "a3", "c3"])
+        self.assertIsNone(entry["outcome"])
+
+    def test_reset_clears_history(self):
+        self.client.post("/game/move/classical", json={"src": "b1", "target": "c3"})
+        self.client.post("/game/reset")
+        response = self.client.get("/game")
+        self.assertEqual(response.json()["move_history"], [])
+
+    def test_history_included_in_move_response(self):
+        response = self.client.post(
+            "/game/move/classical", json={"src": "b1", "target": "c3"}
+        )
+        history = response.json()["move_history"]
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["squares"], ["b1", "c3"])
+
+    def test_merge_move_appends_history_entry(self):
+        # Set up: split a knight into two squares first
+        self.client.post(
+            "/game/move/split",
+            json={"src": "b1", "target_a": "a3", "target_b": "c3"},
+        )
+        # Force white's turn — test-only hack to skip the opponent's move
+        store.get_game().side_to_move = "white"
+
+        response = self.client.post(
+            "/game/move/merge",
+            json={"src_a": "a3", "src_b": "c3", "target": "b1"},
+        )
+        history = response.json()["move_history"]
+        # 2 entries: the split + the merge
+        self.assertEqual(len(history), 2)
+        merge_entry = history[1]
+        self.assertEqual(merge_entry["mode"], "merge")
+        self.assertEqual(merge_entry["piece"], "N")
+        self.assertEqual(merge_entry["squares"], ["a3", "c3", "b1"])
+        self.assertIsNone(merge_entry["outcome"])
 
 
 if __name__ == "__main__":

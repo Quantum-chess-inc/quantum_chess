@@ -28,6 +28,7 @@ const initialSnapshot = {
   game_status: "ongoing",
   legal_moves: [["b1", "c3"], ["b1", "a3"], ["b1", "b4"]] as [string, string][],
   last_move_outcome: null,
+  move_history: [],
 };
 
 describe("App", () => {

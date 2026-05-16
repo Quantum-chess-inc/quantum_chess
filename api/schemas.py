@@ -3,6 +3,15 @@ from typing import Dict, List, Literal, Optional, Tuple
 from pydantic import BaseModel
 
 
+class MoveHistoryEntry(BaseModel):
+    move_number: int
+    side: Literal["white", "black"]
+    mode: Literal["classical", "split", "merge"]
+    piece: str
+    squares: List[str]
+    outcome: Optional[Literal["success", "capture_failed"]] = None
+
+
 class GameSnapshot(BaseModel):
     board: Dict[str, Optional[str]]
     probabilities: Dict[str, float]
@@ -11,6 +20,7 @@ class GameSnapshot(BaseModel):
     game_status: Literal["ongoing", "white_wins", "black_wins"]
     legal_moves: List[Tuple[str, str]]
     last_move_outcome: Optional[Literal["success", "capture_failed"]] = None
+    move_history: List[MoveHistoryEntry] = []
 
 
 class ClassicalMoveRequest(BaseModel):

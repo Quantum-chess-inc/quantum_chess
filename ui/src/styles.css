@@ -549,3 +549,62 @@ input {
 
   .topbar-move { display: none; }
 }
+
+/* ── Move history ── */
+
+.moves-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-raised) transparent;
+}
+
+.move-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+.move-row:last-child {
+  border-bottom: 0;
+}
+
+.move-piece {
+  font-size: 0.8rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.move-notation {
+  flex: 1;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.move-outcome-ok {
+  color: var(--green);
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.move-outcome-fail {
+  color: var(--red);
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.moves-empty {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin: 0;
+  padding-top: 0.3rem;
+  letter-spacing: 0.04em;
+}

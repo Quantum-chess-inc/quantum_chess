@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+from typing import NoReturn
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -22,48 +23,47 @@ from api.state_store import snapshot_game, store
 app = FastAPI(title="Quantum Chess API")
 
 
-def _handle_engine_error(exc: ValueError):
+def _handle_engine_error(exc: ValueError) -> NoReturn:
     raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/game", response_model=GameSnapshot)
 def get_game() -> GameSnapshot:
-    return snapshot_game(store.get_game())
+    game, history = store.get_snapshot_data()
+    return snapshot_game(game, history)
 
 
 @app.post("/game/reset", response_model=GameSnapshot)
 def reset_game() -> GameSnapshot:
-    return snapshot_game(store.reset())
+    game = store.reset()
+    return snapshot_game(game, [])
 
 
 @app.post("/game/move/classical", response_model=GameSnapshot)
 def apply_classical_move(payload: ClassicalMoveRequest) -> GameSnapshot:
-    game = store.get_game()
     try:
-        game.apply_classical_move(payload.src, payload.target)
+        game = store.apply_classical_move(payload.src, payload.target)
+        return snapshot_game(game, store.get_history())
     except ValueError as exc:
         _handle_engine_error(exc)
-    return snapshot_game(game)
 
 
 @app.post("/game/move/split", response_model=GameSnapshot)
 def apply_split_move(payload: SplitMoveRequest) -> GameSnapshot:
-    game = store.get_game()
     try:
-        game.apply_split_move(payload.src, payload.target_a, payload.target_b)
+        game = store.apply_split_move(payload.src, payload.target_a, payload.target_b)
+        return snapshot_game(game, store.get_history())
     except ValueError as exc:
         _handle_engine_error(exc)
-    return snapshot_game(game)
 
 
 @app.post("/game/move/merge", response_model=GameSnapshot)
 def apply_merge_move(payload: MergeMoveRequest) -> GameSnapshot:
-    game = store.get_game()
     try:
-        game.apply_merge_move(payload.src_a, payload.src_b, payload.target)
+        game = store.apply_merge_move(payload.src_a, payload.src_b, payload.target)
+        return snapshot_game(game, store.get_history())
     except ValueError as exc:
         _handle_engine_error(exc)
-    return snapshot_game(game)
 
 
 if UI_DIST.exists():

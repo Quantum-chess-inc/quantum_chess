@@ -3,6 +3,15 @@ export type ActionMode = "classical" | "split" | "merge";
 export type GameStatus = "ongoing" | "white_wins" | "black_wins";
 export type MoveOutcome = "success" | "capture_failed";
 
+export interface MoveHistoryEntry {
+  move_number: number;
+  side: SideToMove;
+  mode: ActionMode;
+  piece: string;
+  squares: string[];
+  outcome: MoveOutcome | null;
+}
+
 export interface GameSnapshot {
   board: Record<string, string | null>;
   probabilities: Record<string, number>;
@@ -11,6 +20,7 @@ export interface GameSnapshot {
   game_status: GameStatus;
   legal_moves: [string, string][];
   last_move_outcome: MoveOutcome | null;
+  move_history: MoveHistoryEntry[];
 }
 
 export interface ClassicalMovePayload {

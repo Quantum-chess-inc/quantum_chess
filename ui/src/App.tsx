@@ -4,6 +4,7 @@ import type { ActionMode, GameSnapshot } from "./api/types";
 import { Board } from "./components/Board";
 import { Controls } from "./components/Controls";
 import { GameOverBanner } from "./components/GameOverBanner";
+import { MoveHistory } from "./components/MoveHistory";
 import { Rules } from "./components/Rules";
 import { StatusPanel } from "./components/StatusPanel";
 import { selectionCountForMode, useGame } from "./state/useGame";
@@ -209,6 +210,7 @@ export default function App() {
               onExecute={handleExecute}
               onReset={handleReset}
             />
+            <MoveHistory snapshot={snapshot} />
           </div>
         </div>
       ) : (
