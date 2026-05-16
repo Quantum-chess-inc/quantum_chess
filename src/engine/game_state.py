@@ -520,6 +520,13 @@ class QuantumGame:
         piece = _piece_for_quantum_source(self.board_state, src)
         self._assert_side_to_move(piece)
 
+        # Pawn-specific geometry check must come before the empty-target check so that
+        # the promotion-rank error is raised even when the target squares are occupied.
+        if piece.lower() == "p":
+            back_rank = 7 if piece.isupper() else 0
+            if parse_square(target_a) // 8 == back_rank or parse_square(target_b) // 8 == back_rank:
+                raise ValueError("pawn cannot split to promotion rank")
+
         # Split moves are non-capturing: both targets must be empty across all basis states
         for sq in (target_a, target_b):
             if self.board_state.probability(sq) > 1e-9:
@@ -536,11 +543,6 @@ class QuantumGame:
             # Raise a meaningful error from the first basis
             validate_move_on_basis(occupied_bases[0], src, target_a, castling_rights=self.castling_rights)
             validate_move_on_basis(occupied_bases[0], src, target_b, castling_rights=self.castling_rights)
-
-        if piece.lower() == "p":
-            back_rank = 7 if piece.isupper() else 0
-            if parse_square(target_a) // 8 == back_rank or parse_square(target_b) // 8 == back_rank:
-                raise ValueError("pawn cannot split to promotion rank")
 
         self._revoke_castling_rights(parse_square(src))
         self.en_passant_target = None
