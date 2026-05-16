@@ -90,7 +90,7 @@ describe("MoveHistory", () => {
       ],
     };
     render(<MoveHistory snapshot={snapshot} />);
-    expect(screen.getByText("✗")).toBeInTheDocument();
+    expect(screen.getByText("⚛ Negative observation")).toBeInTheDocument();
   });
 
   it("handles null snapshot gracefully", () => {
