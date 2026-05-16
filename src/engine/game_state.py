@@ -530,6 +530,7 @@ class QuantumGame:
         self.last_move_outcome = "success"
 
     def apply_split_move(self, src: str, target_a: str, target_b: str):
+        self.last_move_outcome = None
         if target_a == target_b:
             raise ValueError("split move targets must differ")
 
@@ -597,6 +598,7 @@ class QuantumGame:
         self._advance_turn()
 
     def apply_merge_move(self, src_a: str, src_b: str, target: str):
+        self.last_move_outcome = None
         if src_a == src_b:
             raise ValueError("merge move requires two distinct source squares")
 

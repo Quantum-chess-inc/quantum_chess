@@ -67,7 +67,7 @@ export function Board({ snapshot, sourceSquares, legalTargets, failedSquare, onS
                 style={{ "--heat-opacity": heatOpacity } as React.CSSProperties}
                 onClick={() => onSelectSquare(square)}
                 aria-label={`Square ${square}`}
-                title={!piece && probability > 0 ? `Superposition: ${Math.round(probability * 100)}% chance of a piece here — use ◎ Measure to resolve` : undefined}
+                title={!piece && probability > 0 ? `Superposition: ${Math.round(probability * 100)}% chance of a piece here` : undefined}
               >
                 <div className="square-heat" />
                 {isLegalTarget && (piece ? <div className="sq-legal-ring" /> : <div className="sq-legal-dot" />)}
