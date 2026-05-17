@@ -1,0 +1,72 @@
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Unit Tests"]
+    types:
+      - completed
+    branches:
+      - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: quantum-chess-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to self-hosted runner
+    runs-on: self-hosted
+
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Create production compose override
+        run: |
+          cat > docker-compose.prod.yml <<'EOF'
+          services:
+            app:
+              container_name: quantum-chess
+              restart: unless-stopped
+              ports:
+                - "8000:8000"
+          EOF
+
+      - name: Build and deploy
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            up -d --build --remove-orphans
+
+      - name: Wait for app health
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000 >/dev/null; then
+              echo "App is up"
+              exit 0
+            fi
+
+            echo "Waiting for app..."
+            sleep 2
+          done
+
+          echo "App did not become healthy"
+          docker compose logs --tail=100 app
+          exit 1
+
+      - name: Cleanup old Docker images
+        run: |
+          docker image prune -f
