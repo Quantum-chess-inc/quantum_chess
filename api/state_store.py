@@ -1,3 +1,4 @@
+import copy
 from threading import Lock
 from typing import Optional
 
@@ -13,10 +14,36 @@ class GameStateStore:
         self._lock = Lock()
         self._game = QuantumGame.initial()
         self._move_history: list[MoveHistoryEntry] = []
+        self._legal_moves_cache: Optional[list[tuple[str, str]]] = None
+        self._legal_moves_cache_key: Optional[tuple] = None
+
+    def _invalidate_cache(self) -> None:
+        self._legal_moves_cache = None
+        self._legal_moves_cache_key = None
+
+    def get_legal_moves(self) -> list[tuple[str, str]]:
+        with self._lock:
+            key = (
+                self._game.side_to_move,
+                self._game.en_passant_target,
+                tuple(sorted(self._game.castling_rights.items())),
+                id(self._game.board_state.amplitudes),
+            )
+            if self._legal_moves_cache_key == key and self._legal_moves_cache is not None:
+                return self._legal_moves_cache
+            moves = legal_moves_for(
+                self._game.board_state,
+                self._game.side_to_move,
+                castling_rights=self._game.castling_rights,
+                en_passant_target=self._game.en_passant_target,
+            )
+            self._legal_moves_cache = moves
+            self._legal_moves_cache_key = key
+            return moves
 
     def get_game(self) -> QuantumGame:
         with self._lock:
-            return self._game
+            return copy.deepcopy(self._game)
 
     def get_history(self) -> list[MoveHistoryEntry]:
         with self._lock:
@@ -24,20 +51,24 @@ class GameStateStore:
 
     def get_snapshot_data(self) -> tuple[QuantumGame, list[MoveHistoryEntry]]:
         with self._lock:
-            return self._game, list(self._move_history)
+            return copy.deepcopy(self._game), list(self._move_history)
 
     def reset(self) -> QuantumGame:
         with self._lock:
             self._game = QuantumGame.initial()
             self._move_history = []
-            return self._game
+            self._invalidate_cache()
+            return copy.deepcopy(self._game)
 
     def apply_classical_move(self, src: str, target: str) -> QuantumGame:
         with self._lock:
             game = self._game
             move_number = game.fullmove_number
             side = game.side_to_move
-            piece = game.piece_at(src) or "?"
+            try:
+                piece = game.piece_at(src) or "?"
+            except ValueError:
+                piece = "?"
             game.apply_classical_move(src, target)
             self._move_history.append(MoveHistoryEntry(
                 move_number=move_number,
@@ -47,14 +78,18 @@ class GameStateStore:
                 squares=[src, target],
                 outcome=game.last_move_outcome,
             ))
-            return game
+            self._invalidate_cache()
+            return copy.deepcopy(game)
 
     def apply_split_move(self, src: str, target_a: str, target_b: str) -> QuantumGame:
         with self._lock:
             game = self._game
             move_number = game.fullmove_number
             side = game.side_to_move
-            piece = game.piece_at(src) or "?"
+            try:
+                piece = game.piece_at(src) or "?"
+            except ValueError:
+                piece = "?"
             game.apply_split_move(src, target_a, target_b)
             self._move_history.append(MoveHistoryEntry(
                 move_number=move_number,
@@ -64,14 +99,18 @@ class GameStateStore:
                 squares=[src, target_a, target_b],
                 outcome=None,
             ))
-            return game
+            self._invalidate_cache()
+            return copy.deepcopy(game)
 
     def apply_merge_move(self, src_a: str, src_b: str, target: str) -> QuantumGame:
         with self._lock:
             game = self._game
             move_number = game.fullmove_number
             side = game.side_to_move
-            piece = game.piece_at(src_a) or "?"
+            try:
+                piece = game.piece_at(src_a) or "?"
+            except ValueError:
+                piece = "?"
             game.apply_merge_move(src_a, src_b, target)
             self._move_history.append(MoveHistoryEntry(
                 move_number=move_number,
@@ -81,13 +120,18 @@ class GameStateStore:
                 squares=[src_a, src_b, target],
                 outcome=None,
             ))
-            return game
+            self._invalidate_cache()
+            return copy.deepcopy(game)
 
 
 store = GameStateStore()
 
 
-def snapshot_game(game: QuantumGame, history: Optional[list[MoveHistoryEntry]] = None) -> GameSnapshot:
+def snapshot_game(
+    game: QuantumGame,
+    history: Optional[list[MoveHistoryEntry]] = None,
+    legal_moves: Optional[list[tuple[str, str]]] = None,
+) -> GameSnapshot:
     board = game.board_summary()
     probabilities = {
         square_name(index): game.board_state.probability(square_name(index))
@@ -95,16 +139,17 @@ def snapshot_game(game: QuantumGame, history: Optional[list[MoveHistoryEntry]] =
     }
     cr = game.castling_rights
     ep = game.en_passant_target
+    computed_moves = legal_moves if legal_moves is not None else legal_moves_for(
+        game.board_state, game.side_to_move,
+        castling_rights=cr, en_passant_target=ep,
+    )
     return GameSnapshot(
         board=board,
         probabilities=probabilities,
         side_to_move=game.side_to_move,
         fullmove_number=game.fullmove_number,
         game_status=compute_game_status(game.board_state),
-        legal_moves=legal_moves_for(
-            game.board_state, game.side_to_move,
-            castling_rights=cr, en_passant_target=ep,
-        ),
+        legal_moves=computed_moves,
         last_move_outcome=game.last_move_outcome,
         move_history=history or [],
     )

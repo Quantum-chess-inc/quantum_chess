@@ -7,7 +7,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from engine.board_state import BoardState, parse_square
-from engine.quantum_ops import _move_piece_in_tuple, measure, merge_move, observe_square, split_move
+from engine.quantum_ops import _move_piece_in_tuple, merge_move, observe_square, split_move
 
 
 class QuantumOpsTest(unittest.TestCase):
@@ -50,27 +50,6 @@ class QuantumOpsTest(unittest.TestCase):
         self.assertEqual(list(new_state.amplitudes.keys()), [BoardState._board_to_tuple({"b1": "N"})])
         self.assertAlmostEqual(abs(next(iter(new_state.amplitudes.values()))) ** 2, 1.0)
 
-    @patch("engine.quantum_ops.random.choices", return_value=[True])
-    def test_measure_keeps_occupied_branches_when_observed_occupied(self, _mock_choices):
-        amplitude = 1 / math.sqrt(2)
-        occupied = BoardState._board_to_tuple({"d4": "Q"})
-        empty = BoardState._board_to_tuple({})
-        state = BoardState(amplitudes={occupied: amplitude + 0j, empty: amplitude + 0j})
-
-        collapsed = measure(state, "d4")
-
-        self.assertEqual(collapsed.amplitudes, {occupied: 1 + 0j})
-
-    @patch("engine.quantum_ops.random.choices", return_value=[False])
-    def test_measure_keeps_empty_branches_when_observed_empty(self, _mock_choices):
-        amplitude = 1 / math.sqrt(2)
-        occupied = BoardState._board_to_tuple({"d4": "Q"})
-        empty = BoardState._board_to_tuple({})
-        state = BoardState(amplitudes={occupied: amplitude + 0j, empty: amplitude + 0j})
-
-        collapsed = measure(state, "d4")
-
-        self.assertEqual(collapsed.amplitudes, {empty: 1 + 0j})
 
 
 class ObserveSquareTest(unittest.TestCase):

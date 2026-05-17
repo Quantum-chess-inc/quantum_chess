@@ -192,7 +192,6 @@ class AutoPromotionTest(unittest.TestCase):
         basis = BoardState._board_to_tuple({"e7": "P", "a1": "K", "a8": "k"})
         game = QuantumGame(board_state=BoardState(amplitudes={basis: 1 + 0j}))
         game.apply_classical_move("e7", "e8")
-        self.assertFalse(game.promotion_pending)
         self.assertEqual(game.piece_at("e8"), "Q")
         self.assertEqual(game.side_to_move, "black")
 
@@ -200,7 +199,6 @@ class AutoPromotionTest(unittest.TestCase):
         basis = BoardState._board_to_tuple({"e2": "p", "h1": "K", "h8": "k"})
         game = QuantumGame(board_state=BoardState(amplitudes={basis: 1 + 0j}), side_to_move="black")
         game.apply_classical_move("e2", "e1")
-        self.assertFalse(game.promotion_pending)
         self.assertEqual(game.piece_at("e1"), "q")
         self.assertEqual(game.side_to_move, "white")
 

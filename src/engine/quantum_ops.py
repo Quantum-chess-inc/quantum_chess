@@ -1,4 +1,3 @@
-import copy
 import math
 import random
 
@@ -19,8 +18,8 @@ def split_move(state: BoardState, src: str, t1: str, t2: str) -> BoardState:
     The piece at 'src' splits to exist in 't1' and 't2' simultaneously, 
     doubling the relevant basis states.
     """
-    new_state = BoardState(entanglement_map=copy.deepcopy(state.entanglement_map))
-    
+    new_state = BoardState()
+
     src_idx = parse_square(src)
     t1_idx = parse_square(t1)
     t2_idx = parse_square(t2)
@@ -49,8 +48,8 @@ def merge_move(state: BoardState, src1: str, src2: str, target: str) -> BoardSta
     Combines two halves of a superposed piece back into a single square.
     Basis states will interfere, resulting in a reduced superposition.
     """
-    new_state = BoardState(entanglement_map=copy.deepcopy(state.entanglement_map))
-    
+    new_state = BoardState()
+
     src1_idx = parse_square(src1)
     src2_idx = parse_square(src2)
     tgt_idx = parse_square(target)
@@ -72,37 +71,6 @@ def merge_move(state: BoardState, src1: str, src2: str, target: str) -> BoardSta
     new_state.normalize()
     return new_state
 
-def measure(state: BoardState, target_square: str) -> BoardState:
-    """
-    Measures a square, forcing the wavefunction to collapse.
-    Samples from the amplitude-squared distribution and filters out invalid universes.
-    """
-    tgt_idx = parse_square(target_square)
-    
-    # Calculate probability of the square being occupied
-    prob_occupied = 0.0
-    for basis, amp in state.amplitudes.items():
-        if basis[tgt_idx] is not None:
-            prob_occupied += abs(amp)**2
-            
-    # Sample from the probability distribution to determine the classical outcome
-    is_occupied = random.choices(
-        [True, False],
-        weights=[prob_occupied, 1.0 - prob_occupied],
-        k=1,
-    )[0]
-    
-    new_state = BoardState(entanglement_map=copy.deepcopy(state.entanglement_map))
-    
-    # Filter basis states that don't match our measured reality
-    for basis, amp in state.amplitudes.items():
-        occupied_in_basis = basis[tgt_idx] is not None
-        if occupied_in_basis == is_occupied:
-            new_state.amplitudes[basis] = amp
-            
-    # Re-normalize the surviving universes so probabilities sum to 1.0
-    new_state.normalize()
-    return new_state
 
 def observe_square(state: BoardState, target_square: str) -> tuple[bool, BoardState]:
     """
@@ -118,7 +86,7 @@ def observe_square(state: BoardState, target_square: str) -> tuple[bool, BoardSt
     )
     is_present = random.choices([True, False], weights=[prob_occupied, 1.0 - prob_occupied], k=1)[0]
 
-    new_state = BoardState(entanglement_map=copy.deepcopy(state.entanglement_map))
+    new_state = BoardState()
     for basis, amp in state.amplitudes.items():
         if (basis[tgt_idx] is not None) == is_present:
             new_state.amplitudes[basis] = amp

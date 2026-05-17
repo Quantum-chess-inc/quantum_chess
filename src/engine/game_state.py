@@ -43,6 +43,11 @@ def _path_is_clear(basis: BasisState, src_idx: int, tgt_idx: int) -> bool:
     return True
 
 
+def _castling_path_is_clear(basis: BasisState, src_idx: int, file_delta: int) -> bool:
+    rook_src = (src_idx // 8) * 8 + (7 if file_delta > 0 else 0)
+    return _path_is_clear(basis, src_idx, rook_src)
+
+
 def _would_move_in_basis(basis: BasisState, src_idx: int, tgt_idx: int, piece: str) -> bool:
     """True when piece can physically move src→tgt in this basis:
     path to target is clear of any piece, AND the target is either empty,
@@ -57,9 +62,8 @@ def _would_move_in_basis(basis: BasisState, src_idx: int, tgt_idx: int, piece: s
         return _path_is_clear(basis, src_idx, tgt_idx)
     if lower == "k":
         file_delta = (tgt_idx % 8) - (src_idx % 8)
-        if abs(file_delta) == 2:  # castling — check path between king and rook
-            rook_src = (src_idx // 8) * 8 + (7 if file_delta > 0 else 0)
-            return _path_is_clear(basis, src_idx, rook_src)
+        if abs(file_delta) == 2:
+            return _castling_path_is_clear(basis, src_idx, file_delta)
     return True  # knights, pawns, non-castling kings have no intermediate squares to block
 
 
@@ -103,7 +107,7 @@ def _is_legal_piece_move(
             rook_src = src_rank * 8 + (7 if file_delta > 0 else 0)
             if basis[rook_src] != rook_piece:
                 return False
-            return _path_is_clear(basis, src_idx, rook_src)
+            return _castling_path_is_clear(basis, src_idx, file_delta)
         return False
 
     if lower_piece == "b":
@@ -351,8 +355,6 @@ class QuantumGame:
     board_state: BoardState
     side_to_move: str = "white"
     fullmove_number: int = 1
-    promotion_pending: bool = False
-    promotion_square: Optional[str] = None
     castling_rights: dict = field(default_factory=lambda: dict(_CASTLING_INITIAL))
     en_passant_target: Optional[str] = None
     last_move_outcome: Optional[str] = None  # "success" | "capture_failed"
@@ -400,10 +402,7 @@ class QuantumGame:
         result_amps = dict(modified)
         for basis, amp in unmodified.items():
             result_amps[basis] = result_amps.get(basis, 0j) + amp
-        self.board_state = BoardState(
-            amplitudes=result_amps,
-            entanglement_map=self.board_state.entanglement_map,
-        )
+        self.board_state = BoardState(amplitudes=result_amps)
         self.board_state.normalize()
 
         self._revoke_castling_rights(src_idx)
@@ -422,10 +421,7 @@ class QuantumGame:
                 if lst[tgt_idx] == piece:
                     lst[tgt_idx] = queen
                 new_amps[tuple(lst)] = amp
-            self.board_state = BoardState(
-                amplitudes=new_amps,
-                entanglement_map=self.board_state.entanglement_map,
-            )
+            self.board_state = BoardState(amplitudes=new_amps)
 
         self._advance_turn()
 
@@ -590,10 +586,7 @@ class QuantumGame:
                             new_amps[tuple(lst)] = amp
                         else:
                             new_amps[basis] = amp
-                    self.board_state = BoardState(
-                        amplitudes=new_amps,
-                        entanglement_map=self.board_state.entanglement_map,
-                    )
+                    self.board_state = BoardState(amplitudes=new_amps)
 
         self._advance_turn()
 

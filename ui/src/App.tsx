@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { ActionMode, GameSnapshot } from "./api/types";
+import type { ActionMode, GameSnapshot, MoveHistoryEntry } from "./api/types";
 import { Board } from "./components/Board";
 import { Controls } from "./components/Controls";
 import { GameOverBanner } from "./components/GameOverBanner";
@@ -64,6 +64,29 @@ function computeLegalTargets(mode: ActionMode, selected: string[], snapshot: Gam
   return [];
 }
 
+export function computeFailedSquare(
+  entry: MoveHistoryEntry | null
+): string | null {
+  if (!entry || entry.outcome !== "capture_failed") return null;
+  const landing = entry.squares[1] ?? null;
+  if (!landing) return null;
+  const isPawn = entry.piece.toLowerCase() === "p";
+  const landingRank = landing[1];
+  const isEnPassantRank =
+    isPawn &&
+    ((entry.side === "white" && landingRank === "6") ||
+      (entry.side === "black" && landingRank === "3"));
+  if (isEnPassantRank) {
+    const file = landing[0];
+    const capturedRank =
+      entry.side === "white"
+        ? String(parseInt(landingRank) - 1)
+        : String(parseInt(landingRank) + 1);
+    return `${file}${capturedRank}`;
+  }
+  return landing;
+}
+
 export default function App() {
   const [tab, setTab] = useState<Tab>("game");
   const [mode, setMode] = useState<ActionMode>("classical");
@@ -77,8 +100,7 @@ export default function App() {
   const sourceSquares = mode === "merge" ? selected.slice(0, 2) : selected.slice(0, 1);
 
   const lastEntry = snapshot?.move_history.at(-1) ?? null;
-  const failedSquare =
-    lastEntry?.outcome === "capture_failed" ? (lastEntry.squares[1] ?? null) : null;
+  const failedSquare = computeFailedSquare(lastEntry);
 
   function handleModeChange(next: ActionMode) {
     setMode(next);

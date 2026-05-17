@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import App from "./App";
+import App, { computeFailedSquare } from "./App";
 
 const initialBoard = {
   a1: "R", b1: "N", c1: "B", d1: "Q", e1: "K", f1: "B", g1: "N", h1: "R",
@@ -30,6 +30,35 @@ const initialSnapshot = {
   last_move_outcome: null,
   move_history: [],
 };
+
+describe("computeFailedSquare", () => {
+  it("returns null when outcome is not capture_failed", () => {
+    expect(computeFailedSquare({ outcome: "success", squares: ["e5", "d6"], piece: "P", side: "white", mode: "classical", move_number: 1 })).toBeNull();
+  });
+
+  it("returns null for null entry", () => {
+    expect(computeFailedSquare(null)).toBeNull();
+  });
+
+  it("returns the landing square for a non-pawn piece failed capture", () => {
+    expect(computeFailedSquare({ outcome: "capture_failed", squares: ["e4", "d6"], piece: "N", side: "white", mode: "classical", move_number: 1 })).toBe("d6");
+  });
+
+  it("returns the captured pawn square for a white pawn en passant on rank 6", () => {
+    // White pawn lands on f6 — captured pawn was at f5
+    expect(computeFailedSquare({ outcome: "capture_failed", squares: ["e5", "f6"], piece: "P", side: "white", mode: "classical", move_number: 1 })).toBe("f5");
+  });
+
+  it("returns the captured pawn square for a black pawn en passant on rank 3", () => {
+    // Black pawn lands on f3 — captured pawn was at f4
+    expect(computeFailedSquare({ outcome: "capture_failed", squares: ["e4", "f3"], piece: "p", side: "black", mode: "classical", move_number: 1 })).toBe("f4");
+  });
+
+  it("returns the landing square for a pawn capture on a non-en-passant rank", () => {
+    // White pawn on rank 5 takes diagonally — not en passant, return landing square directly
+    expect(computeFailedSquare({ outcome: "capture_failed", squares: ["e4", "f5"], piece: "P", side: "white", mode: "classical", move_number: 1 })).toBe("f5");
+  });
+});
 
 describe("App", () => {
   afterEach(() => {

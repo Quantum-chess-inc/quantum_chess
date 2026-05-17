@@ -55,9 +55,6 @@ class BoardState:
     # Maps a classical board configuration (basis state) to its complex probability amplitude
     # This tracks only reachable basis states instead of a full 2^64 state vector
     amplitudes: Dict[BasisState, complex] = field(default_factory=dict)
-    
-    # Tracks which pieces are correlated so collapse propagates correctly
-    entanglement_map: Dict[str, set] = field(default_factory=dict)
 
     @classmethod
     def initial(cls) -> 'BoardState':
@@ -81,11 +78,10 @@ class BoardState:
 
     def amplitude(self, square_name: str) -> complex:
         """
-        Calculates the total amplitude of ANY piece existing on a given square 
-        across all superposed basis states.
-        
-        Note: To get the actual probability, the caller should compute 
-        abs(state.amplitude(sq))**2.
+        Returns the sum of amplitudes across all basis states where the given
+        square is occupied. This is NOT the square root of the occupation
+        probability; use probability() for that. Useful for testing interference
+        effects where the raw amplitude sum is meaningful.
         """
         square_index = parse_square(square_name)
         total_amplitude = 0.0 + 0.0j
